@@ -6,9 +6,9 @@ image: ${IMAGE}
 
 stages:
     - build
-    - push
+    - publish
 
-build:docker:
+build-branch:
     stage: build
     only:
         - branches
@@ -17,7 +17,7 @@ build:docker:
     script:
         - echo "Logging in to internal gitlab container registry";
         - echo ${CI_BUILD_TOKEN} | docker login --username gitlab-ci-token --password-stdin ${ONTREGISTRY};
-        - PYTHON=python3 make ${IMAGENAME};
+        - UPSTREAM=dev PYTHON=python3 make ${IMAGENAME};
         - TAG=${ONTREGISTRY}/${CI_PROJECT_PATH}/${IMAGENAME}:${CI_COMMIT_REF_NAME};
         - echo "Pushing ${TAG}";
         - docker tag $OWNER/${IMAGENAME}:latest ${TAG};
@@ -28,37 +28,29 @@ build:docker:
               echo "Pushing ${DEV_TAG}";
               docker tag $OWNER/${IMAGENAME}:latest ${DEVTAG};
               docker push ${DEVTAG};
+              HUBTAG=ontresearch/${IMAGENAME}:dev;
+              echo "Pushing dockerhub ${HUBTAG}";
+              echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin;
+              docker tag $OWNER/${IMAGENAME}:latest ${HUBTAG};
           fi
         - echo "All done";
 
-
-# push to dockerhub, requires target image ${TAG}
-.pushhubstub: &push_hub
-    stage: push
+publish-tag:
+    stage: publish
+    only:
+        - tags
     before_script:
-        - ORIG_TAG=${ONTREGISTRY}/${CI_PROJECT_PATH}/${IMAGENAME}:dev-${CI_COMMIT_SHORT_SHA}
-        - echo "Pulling ${ORIG_TAG}"
-        - docker pull ${ORIG_TAG}
+        - apk add make bash git openssl py3-virtualenv python3
     script:
-        - echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin
-        - echo "Pushing ${TAG}"
-        - docker tag ${ORIG_TAG} ${TAG}
-        - docker push ${TAG}
-
-# Push git tags to dockerhub
-push:tag-dockerhub:
-    only:
-        - tags
-    variables:
-        TAG: ontresearch/${IMAGENAME}:${CI_COMMIT_TAG}
-    <<: *push_hub
-
-# Push dev commit to dockerhub
-push:dev-dockerhub:
-    only:
-        - /^dev$/
-    except:
-        - tags
-    variables:
-        TAG: ontresearch/${IMAGENAME}:dev
-    <<: *push_hub
+        # We could pull the dev-commit tag from the repo, but instead let's
+        # always build from the latest tag of the upstream image on dockerhub.
+        # All being well this should amount to the same thing.
+        - echo "Logging in to internal gitlab container registry";
+        - echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin;
+        - export UPSTREAM=$(make echo_latest_upstream | tail -n 1);
+        - echo "Upstream tag ${UPSTREAM}";
+        - PYTHON=python3 make ${IMAGENAME};
+        - HUBTAG=ontresearch/${IMAGENAME}:${CI_COMMIT_TAG};
+        - echo "Pushing dockerhub ${HUBTAG}";
+        - docker tag $OWNER/${IMAGENAME}:latest ${TAG};
+        - docker push ${TAG};
