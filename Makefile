@@ -28,13 +28,17 @@ $(VENV):
 > pip install pip --upgrade
 > pip install requests semver
 
+.PHONY: echo_latest_upstream
+echo_latest_upstream: venv/bin/activate
+> ${IN_VENV}
+> $(eval TAG=$(shell . venv/bin/activate; python dockerhub_tag.py $(OWNER)/$(BASENAME) --prefix v))
+> echo $(TAG)
 
 OWNER := ontresearch
 BASENAME := nanolabs-notebook
+UPSTREAMTAG := dev
 
 .PHONY: epi2melabs-notebook
-epi2melabs-notebook: venv/bin/activate
-> ${IN_VENV}
-> $(eval TAG=$(shell . venv/bin/activate; python dockerhub_tag.py $(OWNER)/$(BASENAME) --prefix v))
-> echo "Latest ${OWNER}/${BASENAME} tag: $(TAG)"
-> docker build --rm --force-rm --build-arg BASE_CONTAINER=$(OWNER)/$(BASENAME):$(TAG) -t $(OWNER)/$@:latest -f epi2melabs.dockerfile .
+epi2melabs-notebook:
+> echo "Using upstream ${OWNER}/${BASENAME} tag: $(UPSTREAM)"
+> docker build --rm --force-rm --build-arg BASE_CONTAINER=$(OWNER)/$(BASENAME):$(UPSTREAM) -t $(OWNER)/$@:latest -f epi2melabs.dockerfile .
