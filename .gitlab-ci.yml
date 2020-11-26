@@ -32,6 +32,7 @@ build-branch:
               echo "Pushing dockerhub ${HUBTAG}";
               echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin;
               docker tag $OWNER/${IMAGENAME}:latest ${HUBTAG};
+              docker push ${HUBTAG}
           fi
         - echo "All done";
 
@@ -52,5 +53,5 @@ publish-tag:
         - PYTHON=python3 make ${IMAGENAME};
         - HUBTAG=ontresearch/${IMAGENAME}:${CI_COMMIT_TAG};
         - echo "Pushing dockerhub ${HUBTAG}";
-        - docker tag $OWNER/${IMAGENAME}:latest ${TAG};
-        - docker push ${TAG};
+        - docker tag $OWNER/${IMAGENAME}:latest ${HUBTAG};
+        - docker push ${HUBTAG};
