@@ -48,7 +48,7 @@ publish-tag:
         # All being well this should amount to the same thing.
         - echo "Logging in to internal gitlab container registry";
         - echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin;
-        - export UPSTREAM=$(make echo_latest_upstream | tail -n 1);
+        - export UPSTREAM=$(PYTHON=python3 make echo_latest_upstream | tail -n 1);
         - echo "Upstream tag ${UPSTREAM}";
         - PYTHON=python3 make ${IMAGENAME};
         - HUBTAG=ontresearch/${IMAGENAME}:${CI_COMMIT_TAG};
